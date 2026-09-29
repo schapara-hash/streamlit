@@ -35,3 +35,65 @@ st.write("### (2) add a multi-select for Sub_Category *in the selected Category 
 st.write("### (3) show a line chart of sales for the selected items in (2)")
 st.write("### (4) show three metrics (https://docs.streamlit.io/library/api-reference/data/st.metric) for the selected items in (2): total sales, total profit, and overall profit margin (%)")
 st.write("### (5) use the delta option in the overall profit margin metric to show the difference between the overall average profit margin (all products across all categories)")
+# (1) Category dropdown
+category = st.selectbox(
+    "Select a Category",
+    df["Category"].unique()
+)
+
+# (2) Sub-Category multi-select based on selected Category
+subcategories = df[df["Category"] == category]["Sub_Category"].unique()
+
+selected_subcategories = st.multiselect(
+    "Select Sub-Categories",
+    subcategories,
+    default=subcategories
+)
+
+# Filter data based on selections
+filtered_df = df[
+    (df["Category"] == category) &
+    (df["Sub_Category"].isin(selected_subcategories))
+]
+
+# (3) Line chart of sales for selected Sub-Categories
+sales_selected = filtered_df.groupby(
+    [pd.Grouper(freq="ME"), "Sub_Category"]
+)["Sales"].sum().unstack()
+
+st.line_chart(sales_selected)
+
+# (4) Calculate metrics for selected items
+total_sales = filtered_df["Sales"].sum()
+total_profit = filtered_df["Profit"].sum()
+
+if total_sales != 0:
+    profit_margin = (total_profit / total_sales) * 100
+else:
+    profit_margin = 0
+
+# (5) Calculate overall profit margin and delta
+overall_sales = df["Sales"].sum()
+overall_profit = df["Profit"].sum()
+overall_profit_margin = (overall_profit / overall_sales) * 100
+
+profit_margin_delta = profit_margin - overall_profit_margin
+
+# Display three metrics
+col1, col2, col3 = st.columns(3)
+
+col1.metric(
+    "Total Sales",
+    f"${total_sales:,.2f}"
+)
+
+col2.metric(
+    "Total Profit",
+    f"${total_profit:,.2f}"
+)
+
+col3.metric(
+    "Overall Profit Margin",
+    f"{profit_margin:.2f}%",
+    delta=f"{profit_margin_delta:.2f}%"
+)
